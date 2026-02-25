@@ -132,3 +132,7 @@
 .font-bold {
     font-weight : 700 !important;
 }
+
+table {
+    border : 1px solid var(--border) !important;
+}

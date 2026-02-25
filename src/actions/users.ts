@@ -194,3 +194,67 @@ export const getLoggedInUser = async () => {
   }
 };
 
+export const getAllUsers = async () => {
+  try {
+    const { data, error } = await supabaseConfig
+      .from("user_profiles")
+      .select("id, created_at, name, email, role, status")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return {
+      success: true,
+      message: "Users fetched successfully",
+      users: data,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || "Failed to fetch users",
+      users: null,
+    };
+  }
+};
+
+export const updateUserRoleById = async (id: number, role: IUser["role"]) => {
+  try {
+    if (!id) {
+      throw new Error("User id is required");
+    }
+
+    if (!role) {
+      throw new Error("User role is required");
+    }
+
+    const { data, error } = await supabaseConfig
+      .from("user_profiles")
+      .update({ role })
+      .eq("id", id)
+      .select("id, created_at, name, email, role, status")
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!data) {
+      throw new Error("User not found");
+    }
+
+    return {
+      success: true,
+      message: "User role updated successfully",
+      user: data,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || "Failed to update user role",
+      user: null,
+    };
+  }
+};
+

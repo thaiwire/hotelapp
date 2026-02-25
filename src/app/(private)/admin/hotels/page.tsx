@@ -1,10 +1,19 @@
-'use client';
+'use client'
 
-import { deleteHotelById, getHotelsByOwnerId } from '@/actions/hotels';
-import InfoMessage from '@/components/info-message';
-import HotelInfoModal from '@/components/hotel-info-modal';
+import React, { useEffect, useState } from 'react'
+import { editHotelById, getAllHotels } from '@/actions/hotels'
+import type { IHotel } from '@/app/interfaces'
+import InfoMessage from '@/components/info-message'
+import HotelInfoModal from '@/components/hotel-info-modal'
 import PageTitle from '@/components/page-title'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -13,74 +22,70 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { UsersStore, useUsersStore } from '@/store/users-store';
-import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
-import Link from 'next/link'
-import React, { useEffect, useState } from 'react'
-import type { IHotel } from '@/app/interfaces'
-import toast from 'react-hot-toast';
+import { Eye } from 'lucide-react'
+import toast from 'react-hot-toast'
 
+const HOTEL_STATUS_OPTIONS = ['pending', 'approved', 'rejected'] as const
 
-
-
-function HotelsOwnerPage() {
-  const {loggedInUser}:UsersStore = useUsersStore()
+function AdminHotelsPage() {
   const [loading, setLoading] = useState(true)
-  const [deletingHotelId, setDeletingHotelId] = useState<number | null>(null)
-  const [errorMessage, setErrorMessage] = useState("")
+  const [errorMessage, setErrorMessage] = useState('')
+  const [updatingHotelId, setUpdatingHotelId] = useState<number | null>(null)
   const [hotels, setHotels] = useState<IHotel[]>([])
   const [selectedHotel, setSelectedHotel] = useState<IHotel | null>(null)
   const [isHotelInfoOpen, setIsHotelInfoOpen] = useState(false)
 
-  const handleDeleteHotel = async (hotelId: number) => {
-    const confirmed = window.confirm("Are you sure you want to delete this hotel?")
-    if (!confirmed) {
-      return
-    }
-
-    try {
-      setDeletingHotelId(hotelId)
-      const response = await deleteHotelById(hotelId)
-
-      if (!response.success) {
-        toast.error(response.message || "Failed to delete hotel")
-        return
-      }
-
-      setHotels((prevHotels) => prevHotels.filter((hotel) => hotel.id !== hotelId))
-      toast.success(response.message || "Hotel deleted successfully")
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete hotel")
-    } finally {
-      setDeletingHotelId(null)
-    }
-  }
-
   useEffect(() => {
     const loadHotels = async () => {
       try {
-        if (!loggedInUser?.id) {
-          setLoading(false)
-          return
-        }
+        const response = await getAllHotels()
 
-        const response = await getHotelsByOwnerId(loggedInUser.id)
         if (!response.success) {
-          setErrorMessage(response.message || "Failed to fetch hotels")
+          setErrorMessage(response.message || 'Failed to fetch hotels')
           return
         }
 
         setHotels(response.hotels || [])
       } catch (error: any) {
-        setErrorMessage(error.message || "Failed to fetch hotels")
+        setErrorMessage(error.message || 'Failed to fetch hotels')
       } finally {
         setLoading(false)
       }
     }
 
     loadHotels()
-  }, [loggedInUser?.id])
+  }, [])
 
+  const handleStatusChange = (hotelId: number, status: IHotel['status']) => {
+    setHotels((prevHotels) =>
+      prevHotels.map((hotel) =>
+        hotel.id === hotelId
+          ? {
+              ...hotel,
+              status,
+            }
+          : hotel
+      )
+    )
+  }
+
+  const handleUpdateStatus = async (hotel: IHotel) => {
+    try {
+      setUpdatingHotelId(hotel.id)
+      const response = await editHotelById(hotel.id, { status: hotel.status })
+
+      if (!response.success) {
+        toast.error(response.message || 'Failed to update hotel status')
+        return
+      }
+
+      toast.success(response.message || 'Hotel status updated successfully')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update hotel status')
+    } finally {
+      setUpdatingHotelId(null)
+    }
+  }
 
   return (
     <div className='flex flex-col gap-5'>
@@ -91,30 +96,23 @@ function HotelsOwnerPage() {
       />
 
       <div className='flex items-center justify-between'>
-        <PageTitle title="My Hotels" />
-        <Button asChild>
-          <Link href="/hotel_owner/hotels/add" className='flex items-center gap-2'>
-            <Plus className='size-4' />
-            Add New Hotel
-          </Link>
-        </Button>
+        <PageTitle title='Hotels' />
       </div>
-
-      {!loggedInUser?.id && <InfoMessage message='Please wait while user details are loading.' />}
 
       {errorMessage && <InfoMessage message={errorMessage} />}
 
-      {!errorMessage && loggedInUser?.id && (
+      {!errorMessage && (
         <div className='rounded-lg border border-border bg-card p-4 shadow-sm'>
           {loading ? (
             <InfoMessage message='Loading hotels...' />
           ) : hotels.length === 0 ? (
-            <InfoMessage message='No hotels found. Add your first hotel to get started.' />
+            <InfoMessage message='No hotels found.' />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Owner ID</TableHead>
                   <TableHead>City</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead>Email</TableHead>
@@ -127,14 +125,29 @@ function HotelsOwnerPage() {
                 {hotels.map((hotel) => (
                   <TableRow key={hotel.id}>
                     <TableCell className='font-medium'>{hotel.name}</TableCell>
+                    <TableCell>{hotel.owner_id}</TableCell>
                     <TableCell>{hotel.city}</TableCell>
                     <TableCell className='max-w-52 truncate'>{hotel.address}</TableCell>
                     <TableCell>{hotel.email}</TableCell>
                     <TableCell>{hotel.phone}</TableCell>
                     <TableCell>
-                      <span className='inline-flex items-center rounded-full border border-border bg-muted px-2 py-1 text-xs capitalize'>
-                        {hotel.status}
-                      </span>
+                      <Select
+                        value={hotel.status}
+                        onValueChange={(value) =>
+                          handleStatusChange(hotel.id, value as IHotel['status'])
+                        }
+                      >
+                        <SelectTrigger className='w-36 capitalize'>
+                          <SelectValue placeholder='Select status' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {HOTEL_STATUS_OPTIONS.map((statusOption) => (
+                            <SelectItem key={statusOption} value={statusOption} className='capitalize'>
+                              {statusOption}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>
                       <div className='flex items-center justify-end gap-2'>
@@ -150,22 +163,14 @@ function HotelsOwnerPage() {
                         >
                           <Eye className='size-4' />
                         </Button>
-                      <Link href={`/hotel_owner/hotels/edit/${hotel.id}`} >
-                         <Button type='button' variant='outline' size='icon-sm' title='Edit'>
-                          <Pencil className='size-4' />
-                        </Button>
-                      </Link>
-                      
 
                         <Button
                           type='button'
-                          variant='destructive'
-                          size='icon-sm'
-                          title='Delete'
-                          onClick={() => handleDeleteHotel(hotel.id)}
-                          disabled={deletingHotelId === hotel.id}
+                          size='sm'
+                          onClick={() => handleUpdateStatus(hotel)}
+                          disabled={updatingHotelId === hotel.id}
                         >
-                          <Trash2 className='size-4' />
+                          {updatingHotelId === hotel.id ? 'Updating...' : 'Update'}
                         </Button>
                       </div>
                     </TableCell>
@@ -180,4 +185,4 @@ function HotelsOwnerPage() {
   )
 }
 
-export default HotelsOwnerPage
+export default AdminHotelsPage
