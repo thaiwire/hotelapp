@@ -115,6 +115,7 @@ export const loginUser = async (payload: LoginPayload) => {
       {
         id: user.id,
         email: user.email,
+        role: user.role,
       },
       jwtSecret,
       { expiresIn: "7d" }

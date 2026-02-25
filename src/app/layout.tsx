@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import CustomLayout from "@/custom-layout";
 
 
 export const metadata: Metadata = {
@@ -24,10 +25,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`antialiased ${montserrat.variable}`}>
-        <Toaster/>
-        {children}
-
-        </body>
+        <Toaster />
+        <CustomLayout>{children}</CustomLayout>
+      </body>
     </html>
   );
 }
