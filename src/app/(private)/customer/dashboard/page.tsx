@@ -1,79 +1,158 @@
-import LogoutButton from "@/components/logout-button"
-import { getLoggedInUser } from "@/actions/users"
-import { getDateFormat, getTimeFormat } from "@/helpers"
+'use client'
 
-export default async function CustomerDashboardPage() {
-  const currentUserResponse = await getLoggedInUser()
-  const user = currentUserResponse.success ? currentUserResponse.user : null
+import React, { useEffect, useState } from 'react'
+import { Ban, CalendarDays, CheckCheck, ClipboardList } from 'lucide-react'
+
+import { getCustomerDashboardData } from '@/actions/bookings'
+import type { IBooking } from '@/app/interfaces'
+import DashboardStatCard from '@/components/dashboard-stat-card'
+import InfoMessage from '@/components/info-message'
+import PageTitle from '@/components/page-title'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { getDateFormat } from '@/helpers'
+import { UsersStore, useUsersStore } from '@/store/users-store'
+
+function CustomerDashboard() {
+  const { loggedInUser }: UsersStore = useUsersStore()
+
+  const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [cards, setCards] = useState({
+    totalBookings: 0,
+    completedBookings: 0,
+    upcomingBookings: 0,
+    cancelledBookings: 0,
+  })
+  const [recentBookings, setRecentBookings] = useState<IBooking[]>([])
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        if (!loggedInUser?.id) {
+          setLoading(false)
+          return
+        }
+
+        const response = await getCustomerDashboardData(loggedInUser.id)
+        if (!response.success) {
+          setErrorMessage(response.message || 'Failed to fetch dashboard data')
+          return
+        }
+
+        setCards(response.cards)
+        setRecentBookings(response.recentBookings || [])
+      } catch (error: any) {
+        setErrorMessage(error.message || 'Failed to fetch dashboard data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDashboardData()
+  }, [loggedInUser?.id])
 
   return (
-    <main className="min-h-screen bg-background p-6 md:p-10">
-      <section className="mx-auto max-w-6xl space-y-6">
-        <header className="flex items-start justify-between gap-4">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">
-              Customer Dashboard
-            </p>
-            <h1 className="text-3xl font-bold">Welcome back</h1>
-            <p className="text-muted-foreground">
-              Track your bookings, payment status, and upcoming stays.
-            </p>
-          </div>
-          <LogoutButton />
-        </header>
+    <div className='space-y-6'>
+      <PageTitle title='Dashboard' />
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border border-border bg-card p-5">
-            <p className="text-sm text-muted-foreground">Upcoming Trips</p>
-            <p className="mt-2 text-2xl font-semibold">0</p>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-5">
-            <p className="text-sm text-muted-foreground">Completed Stays</p>
-            <p className="mt-2 text-2xl font-semibold">0</p>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-5">
-            <p className="text-sm text-muted-foreground">Saved Hotels</p>
-            <p className="mt-2 text-2xl font-semibold">0</p>
-          </div>
-        </div>
+      {!loggedInUser?.id && <InfoMessage message='Please wait while user details are loading.' />}
 
-        <div className="rounded-lg border border-border bg-card p-5">
-          <h2 className="text-lg font-semibold">Customer Profile</h2>
+      {errorMessage && <InfoMessage message={errorMessage} />}
 
-          {user ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div>
-                <p className="text-sm text-muted-foreground">Name</p>
-                <p className="font-medium">{user.name || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-                <p className="font-medium">{user.email || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Role</p>
-                <p className="font-medium">{user.role || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Status</p>
-                <p className="font-medium">{user.status || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Created at</p>
-                <p className="font-medium">{getDateFormat(user.created_at)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Created time</p>
-                <p className="font-medium">{getTimeFormat(user.created_at)}</p>
+      {!errorMessage && loggedInUser?.id && (
+        <>
+          {loading ? (
+            <InfoMessage message='Loading dashboard data...' />
+          ) : (
+            <div className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4'>
+              <DashboardStatCard
+                title='Total Bookings'
+                value={cards.totalBookings}
+                icon={ClipboardList}
+                borderClassName='border-l-4 border-l-blue-500'
+              />
+              <DashboardStatCard
+                title='Cancelled Bookings'
+                value={cards.cancelledBookings}
+                icon={Ban}
+                borderClassName='border-l-4 border-l-red-500'
+              />
+              <DashboardStatCard
+                title='Completed Bookings'
+                value={cards.completedBookings}
+                icon={CheckCheck}
+                borderClassName='border-l-4 border-l-emerald-500'
+              />
+              <DashboardStatCard
+                title='Upcoming Bookings'
+                value={cards.upcomingBookings}
+                icon={CalendarDays}
+                borderClassName='border-l-4 border-l-violet-500'
+              />
+            </div>
+          )}
+
+          {!loading && (
+            <div className='space-y-3'>
+              <h2 className='text-5xl font-bold'>Recent Bookings</h2>
+
+              <div className='rounded-lg border border-border bg-card'>
+                {recentBookings.length === 0 ? (
+                  <InfoMessage message='No bookings found yet.' />
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className='px-4 py-3'>Hotel</TableHead>
+                        <TableHead className='px-4 py-3'>Room</TableHead>
+                        <TableHead className='px-4 py-3'>Check-in</TableHead>
+                        <TableHead className='px-4 py-3'>Check-out</TableHead>
+                        <TableHead className='px-4 py-3'>Amount</TableHead>
+                        <TableHead className='px-4 py-3'>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recentBookings.map((booking) => (
+                        <TableRow key={booking.id}>
+                          <TableCell className='px-4 py-3'>
+                            {booking.hotel_name || `Hotel #${booking.hotel_id}`}
+                          </TableCell>
+                          <TableCell className='px-4 py-3'>
+                            {booking.room_name || `Room #${booking.room_id}`}
+                          </TableCell>
+                          <TableCell className='px-4 py-3'>{getDateFormat(booking.start_date)}</TableCell>
+                          <TableCell className='px-4 py-3'>{getDateFormat(booking.end_date)}</TableCell>
+                          <TableCell className='px-4 py-3'>${Number(booking.amount || 0)}</TableCell>
+                          <TableCell className='px-4 py-3'>
+                            <span
+                              className={
+                                booking.status === 'cancelled'
+                                  ? 'inline-flex rounded-full bg-red-100 px-4 py-1 text-sm font-medium text-red-700'
+                                  : 'inline-flex rounded-full bg-emerald-100 px-4 py-1 text-sm font-medium text-emerald-700'
+                              }
+                            >
+                              {booking.status === 'cancelled' ? 'Cancelled' : 'Confirmed'}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </div>
             </div>
-          ) : (
-            <p className="mt-3 text-sm text-destructive">
-              {currentUserResponse.message || "Unable to fetch user profile"}
-            </p>
           )}
-        </div>
-      </section>
-    </main>
-  );
+        </>
+      )}
+    </div>
+  )
 }
+
+export default CustomerDashboard

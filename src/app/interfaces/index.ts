@@ -42,3 +42,27 @@ export interface IRoom {
 	hotel?: IHotel
 	owner?: IUser
 }
+
+export interface IBooking {
+	id: number
+	created_at: string
+	room_id: number
+	hotel_id: number
+	owner_id: number
+	customer_id: number
+	hotel_name?: string
+	room_name?: string
+	customer_name?: string
+	booked_dates: string[]
+	start_date: string
+	end_date: string
+	amount: number
+	payment_id: string
+	status: string
+
+	// relationships
+	room?: IRoom
+	hotel?: IHotel
+	owner?: IUser
+	customer?: IUser
+}

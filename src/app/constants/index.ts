@@ -37,5 +37,11 @@ export const amenities =[
   { value: "laundry", label: "Laundry" },  
 ]
 
+export const roomsSortOptions =[
+  { value: "price_asc", label: "Price: Low to High" },
+  { value: "price_desc", label: "Price: High to Low" },
+  { value: "created_at_desc", label: "Newest" },
+  { value: "created_at_asc", label: "Oldest" },
+]  
 
 

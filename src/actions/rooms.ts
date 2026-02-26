@@ -210,3 +210,29 @@ export const getRoomsByOwnerId = async (owner_id: number) => {
     }
   }
 }
+
+export const getActiveRooms = async () => {
+  try {
+    const { data, error } = await supabaseConfig
+      .from('rooms')
+      .select('*')
+      .eq('status', 'available')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return {
+      success: true,
+      message: 'Active rooms fetched successfully',
+      rooms: data,
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || 'Failed to fetch active rooms',
+      rooms: null,
+    }
+  }
+}

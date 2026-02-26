@@ -33,7 +33,7 @@ const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["customer", "hotel_owner", "admin"]),
+  role: z.enum(["customer", "hotel_owner","admin"]),
 })
 
 type RegisterValues = z.infer<typeof registerSchema>
@@ -142,7 +142,7 @@ function RegisterPage() {
                     <SelectContent>
                       <SelectItem value="customer">Customer</SelectItem>
                       <SelectItem value="hotel_owner">Hotel Owner</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
+                      {/* <SelectItem value="admin">Admin</SelectItem> */}
                     </SelectContent>
                   </Select>
                   <FormMessage />
